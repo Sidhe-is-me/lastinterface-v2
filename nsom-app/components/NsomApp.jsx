@@ -3,6 +3,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 
 const STORAGE_KEY = "nsom-tracker-v3";
 const DAILY_KEY = "nsom-daily-v3";
+const DGAEP_SESSION_KEY = "nsom-dgaep-session";
 
 /*
  * ═══════════════════════════════════════════════════════════
@@ -51,6 +52,13 @@ const colors = {
 };
 
 const LOAD_DOMAINS = ["Cognitive", "Emotional", "Sensory", "Social", "Executive"];
+
+const BODY_STATE_OPTIONS = [
+  "Racing thoughts", "Tight chest", "Shallow breathing", "Jaw clenched",
+  "Hands shaking", "Nausea", "Head pressure", "Skin crawling",
+  "Heart pounding", "Can't sit still", "Frozen/stuck", "Crying",
+  "Hot face", "Numb", "Dizzy", "Hyperventilating",
+];
 
 // ——— Storage Helpers (localStorage) ———
 function loadData(key, fallback) {
@@ -654,54 +662,435 @@ Respond in JSON only, no markdown, no backticks:
   );
 }
 
-// ═══ DGAEP With Timers ═══
-function DGAEPWithTimers() {
+// ═══ DGAEP Intro Section ═══
+function DGAEPIntro() {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <section aria-label="What is DGAEP" style={{ marginBottom: 20 }}>
+      <div style={{ background: colors.white, border: `2px solid ${colors.borderLight}`, borderRadius: 14, padding: "20px 22px" }}>
+        <h3 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 20, fontWeight: 700, color: colors.text, margin: "0 0 10px" }}>
+          What is DGAEP?
+        </h3>
+        <p style={{ fontSize: 15, color: colors.text, lineHeight: 1.7, margin: "0 0 10px" }}>
+          The Decision-Gated Autonomic Escalation Protocol is what happens <em>after</em> first-line regulation has been tried and has not worked. It is not a replacement for breathing, grounding, or body scanning. It is the structured next step when those approaches encounter a nervous system state that exceeds their operating range.
+        </p>
+        <p style={{ fontSize: 15, color: colors.text, lineHeight: 1.7, margin: "0 0 12px" }}>
+          If breathing three times did not work, breathing ten times will not work. The system needs <em>different</em> input, not more of the same.
+        </p>
+
+        <button
+          onClick={() => setExpanded(!expanded)}
+          aria-expanded={expanded}
+          aria-controls="dgaep-principles"
+          style={{
+            background: "none", border: "none", cursor: "pointer",
+            fontSize: 14, color: colors.accent, fontWeight: 700,
+            fontFamily: "inherit", padding: "6px 0",
+            display: "flex", alignItems: "center", gap: 8, minHeight: 44,
+          }}
+          onFocus={(e) => Object.assign(e.target.style, focusStyle)}
+          onBlur={(e) => { e.target.style.outline = "none"; e.target.style.outlineOffset = "0"; }}
+        >
+          <span aria-hidden="true" style={{ transition: "transform 0.2s", transform: expanded ? "rotate(90deg)" : "rotate(0deg)", display: "inline-block" }}>▸</span>
+          {expanded ? "Hide core principles" : "Read the 5 core principles"}
+        </button>
+
+        {expanded && (
+          <div id="dgaep-principles" role="region" aria-label="DGAEP core principles" style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 10 }}>
+            {[
+              { title: "Regulation attempts may fail without indicating error", desc: "A technique that doesn't produce a calming response has not failed. It has encountered a system state that exceeds its operating range. The response is escalation to a different category of input." },
+              { title: "Escalation is physiological, not emotional", desc: "DGAEP does not ask what you are feeling, why you are upset, or what triggered the activation. It asks only: did the body change? This is a physiological decision, not a psychological one." },
+              { title: "Cognitive slowing is not always achievable", desc: "When voluntary cognitive slowing fails, the protocol shifts to cognitive interruption — not calming the thoughts, but redirecting the processing resources maintaining the loop toward external structured tasks." },
+              { title: "Containment is a valid endpoint", desc: "Not every escalation resolves in calm. Sometimes the best achievable outcome is: the activation does not get worse, you do not harm yourself or others, and the system is given time." },
+              { title: "Medical escalation has defined red flags", desc: "If chest pain, fainting, confusion, slurred speech, new neurological symptoms, or panic persisting for hours without fluctuation appear — the protocol terminates and medical support is sought. This is non-negotiable." },
+            ].map((p, i) => (
+              <div key={i} style={{ padding: "12px 16px", background: colors.bgDeep, borderRadius: 8, borderLeft: `3px solid ${colors.accent}` }}>
+                <h4 style={{ fontSize: 14, fontWeight: 700, color: colors.text, margin: "0 0 4px" }}>
+                  {i + 1}. {p.title}
+                </h4>
+                <p style={{ fontSize: 14, color: colors.textMuted, lineHeight: 1.6, margin: 0 }}>{p.desc}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+// ═══ Body State Capture ═══
+function BodyStateCapture({ label, stateKey, selectedStates, setSelectedStates, freeText, setFreeText, timestamp }) {
+  const toggleState = (s) => setSelectedStates((prev) => prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]);
+
+  return (
+    <div style={{ background: colors.bgDeep, borderRadius: 10, padding: "16px 18px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+        <h4 style={{ fontSize: 14, fontWeight: 700, color: colors.text, margin: 0, textTransform: "uppercase", letterSpacing: 1 }}>
+          {label}
+        </h4>
+        {timestamp && (
+          <span style={{ fontSize: 12, color: colors.textMuted }}>{timestamp}</span>
+        )}
+      </div>
+      <fieldset style={{ border: "none", padding: 0, margin: 0 }}>
+        <legend style={srOnly}>{label} — select what you notice</legend>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }} role="group" aria-label={`${label} body sensations`}>
+          {BODY_STATE_OPTIONS.map((s) => (
+            <button
+              key={s}
+              onClick={() => toggleState(s)}
+              role="checkbox"
+              aria-checked={selectedStates.includes(s)}
+              style={{
+                padding: "6px 12px", borderRadius: 20,
+                border: `2px solid ${selectedStates.includes(s) ? colors.accent : colors.borderLight}`,
+                background: selectedStates.includes(s) ? colors.accentGlow : "transparent",
+                color: selectedStates.includes(s) ? colors.accent : colors.textMuted,
+                fontSize: 13, cursor: "pointer", fontFamily: "inherit",
+                fontWeight: selectedStates.includes(s) ? 700 : 400, minHeight: 36,
+              }}
+              onFocus={(e) => Object.assign(e.target.style, focusStyle)}
+              onBlur={(e) => { e.target.style.outline = "none"; e.target.style.outlineOffset = "0"; }}
+            >{s}</button>
+          ))}
+        </div>
+      </fieldset>
+      <label htmlFor={`body-note-${stateKey}`} style={{ fontSize: 13, color: colors.textMuted, display: "block", marginBottom: 4 }}>
+        Anything else you notice (optional)
+      </label>
+      <input
+        id={`body-note-${stateKey}`}
+        type="text"
+        value={freeText}
+        onChange={(e) => setFreeText(e.target.value)}
+        placeholder="e.g., left shoulder won't drop, vision tunneling..."
+        style={{ width: "100%", padding: "10px 14px", borderRadius: 6, border: `2px solid ${colors.borderLight}`, fontSize: 14, fontFamily: "inherit", color: colors.text, background: colors.white, boxSizing: "border-box", minHeight: 44 }}
+        onFocus={(e) => Object.assign(e.target.style, focusStyle)}
+        onBlur={(e) => { e.target.style.outline = "none"; e.target.style.outlineOffset = "0"; }}
+      />
+    </div>
+  );
+}
+
+// ═══ Before/After Comparison ═══
+function BodyStateComparison({ beforeStates, beforeNote, afterStates, afterNote }) {
+  if (beforeStates.length === 0 && afterStates.length === 0) return null;
+
+  const resolved = beforeStates.filter((s) => !afterStates.includes(s));
+  const persisting = beforeStates.filter((s) => afterStates.includes(s));
+  const newSymptoms = afterStates.filter((s) => !beforeStates.includes(s));
+
+  return (
+    <div role="region" aria-label="Before and after comparison" style={{ background: colors.white, border: `2px solid ${colors.borderLight}`, borderRadius: 12, padding: "16px 18px", marginTop: 12 }}>
+      <h4 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 17, fontWeight: 700, color: colors.text, margin: "0 0 12px" }}>
+        What Changed
+      </h4>
+
+      {resolved.length > 0 && (
+        <div style={{ marginBottom: 10 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: colors.green, textTransform: "uppercase", letterSpacing: 0.5 }}>Resolved</span>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4 }}>
+            {resolved.map((s) => (
+              <span key={s} style={{ padding: "3px 10px", borderRadius: 16, background: colors.greenSoft, color: colors.green, fontSize: 13, fontWeight: 600, textDecoration: "line-through" }}>{s}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {persisting.length > 0 && (
+        <div style={{ marginBottom: 10 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: colors.amber, textTransform: "uppercase", letterSpacing: 0.5 }}>Still present</span>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4 }}>
+            {persisting.map((s) => (
+              <span key={s} style={{ padding: "3px 10px", borderRadius: 16, background: colors.amberSoft, color: colors.amber, fontSize: 13, fontWeight: 600 }}>{s}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {newSymptoms.length > 0 && (
+        <div style={{ marginBottom: 10 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: colors.blue, textTransform: "uppercase", letterSpacing: 0.5 }}>New</span>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4 }}>
+            {newSymptoms.map((s) => (
+              <span key={s} style={{ padding: "3px 10px", borderRadius: 16, background: colors.blueSoft, color: colors.blue, fontSize: 13, fontWeight: 600 }}>{s}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {resolved.length === 0 && persisting.length === 0 && newSymptoms.length === 0 && (
+        <p style={{ fontSize: 14, color: colors.textMuted, margin: 0, fontStyle: "italic" }}>No changes detected between states.</p>
+      )}
+
+      {(beforeNote || afterNote) && (
+        <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${colors.borderLight}`, fontSize: 13, color: colors.textMuted }}>
+          {beforeNote && <p style={{ margin: "0 0 4px" }}><strong>Before note:</strong> {beforeNote}</p>}
+          {afterNote && <p style={{ margin: 0 }}><strong>After note:</strong> {afterNote}</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══ Enhanced DGAEP With Timers + Body State Tracking ═══
+function DGAEPEnhanced() {
   const levels = [
     { level: 1, name: "Postural Reset & Breathing", time: "3–5 min", seconds: 240, desc: "Change position. Drink water (cold if available). 3 slow breaths: inhale nose, exhale mouth. Place both feet on the floor.", rationale: "Postural change interrupts proprioceptive feedback. Hydration addresses dehydration-driven sympathetic activation." },
     { level: 2, name: "Sensory Weight", time: "15–20 min", seconds: 1020, desc: "Weighted blanket, heavy hoodie, or lap pad. Apply firm pressure — palms together, squeeze arms, press back into wall. If tolerated: cold water on wrists.", rationale: "Deep pressure activates parasympathetic response through proprioceptive loading. Cold input triggers the mammalian dive reflex." },
-    { level: 3, name: "Cognitive Loop Interruption", time: "10–15 min", seconds: 720, desc: "Count backwards from 100 by 7s. Name objects by category. Describe a physical object in exact detail.", rationale: "Reroutes cognitive resources maintaining the dysregulation loop toward external structured tasks." },
-    { level: 4, name: "Rhythmic Override", time: "10–20 min", seconds: 900, desc: "Walking (any pace, rhythmic). Rocking. Bilateral tapping — alternate tapping knees or shoulders. Drumming at steady beat.", rationale: "Vestibular and proprioceptive input competes with the cognitive loop for processing resources." },
-    { level: 5, name: "Sensory Containment", time: "20–30 min", seconds: 1500, desc: "Darken room. Noise-canceling headphones or silence. Functional language only. No questions about feelings. Containment, not engagement.", rationale: "Reduce total sensory load. The system is overwhelmed by input volume — including regulatory input." },
-    { level: 6, name: "Time-Based Holding", time: "20–30 min", seconds: 1500, desc: "Set timer. Stay present. No interventions. No fixing. No techniques. Time and physical safety only.", rationale: "Containment is a valid endpoint. The goal is that activation does not worsen and the system is given time." },
+    { level: 3, name: "Cognitive Loop Interruption", time: "10–15 min", seconds: 720, desc: "Count backwards from 100 by 7s. Name objects by category. Describe a physical object in exact detail.", rationale: "Reroutes cognitive resources maintaining the dysregulation loop toward external structured tasks. This is not distraction — it is deliberate cognitive redirection." },
+    { level: 4, name: "Rhythmic Override", time: "10–20 min", seconds: 900, desc: "Walking (any pace, rhythmic). Rocking. Bilateral tapping — alternate tapping knees or shoulders. Drumming at steady beat. Let the body choose its rhythm.", rationale: "Vestibular and proprioceptive input competes with the cognitive loop for processing resources. Pattern interrupts at the motor cortex level." },
+    { level: 5, name: "Sensory Containment", time: "20–30 min", seconds: 1500, desc: "Darken room. Noise-canceling headphones or silence. Functional language only. No questions about feelings. No reassurance loops. Containment, not engagement.", rationale: "When the system hasn't responded to increased input, reduce total sensory load. The system is overwhelmed by input volume — including regulatory input." },
+    { level: 6, name: "Time-Based Holding", time: "20–30 min", seconds: 1500, desc: "Set timer. Stay present. No interventions. No fixing. No techniques. Time and physical safety only.", rationale: "Containment is a valid endpoint. Not every escalation resolves in calm. The goal is that activation does not worsen and the system is given time." },
   ];
+
   const [activeLevel, setActiveLevel] = useState(null);
+  const [sessionStarted, setSessionStarted] = useState(false);
+
+  // Before state (captured once at start of escalation)
+  const [beforeStates, setBeforeStates] = useState([]);
+  const [beforeNote, setBeforeNote] = useState("");
+  const [beforeTime, setBeforeTime] = useState(null);
+
+  // After state (per level, updated as user progresses)
+  const [afterStates, setAfterStates] = useState({});
+  const [afterNotes, setAfterNotes] = useState({});
+  const [levelResults, setLevelResults] = useState({});
+
+  // Current after capture
+  const [currentAfterStates, setCurrentAfterStates] = useState([]);
+  const [currentAfterNote, setCurrentAfterNote] = useState("");
+  const [showAfterCapture, setShowAfterCapture] = useState(false);
+
+  // Load persisted session
+  useEffect(() => {
+    const session = loadData(DGAEP_SESSION_KEY, null);
+    if (session && session.date === todayStr()) {
+      setSessionStarted(session.started || false);
+      setBeforeStates(session.beforeStates || []);
+      setBeforeNote(session.beforeNote || "");
+      setBeforeTime(session.beforeTime || null);
+      setAfterStates(session.afterStates || {});
+      setAfterNotes(session.afterNotes || {});
+      setLevelResults(session.levelResults || {});
+    }
+  }, []);
+
+  function saveSession(updates = {}) {
+    const session = {
+      date: todayStr(),
+      started: sessionStarted,
+      beforeStates, beforeNote, beforeTime,
+      afterStates, afterNotes, levelResults,
+      ...updates,
+    };
+    saveData(DGAEP_SESSION_KEY, session);
+  }
+
+  function startSession() {
+    const time = timeNow();
+    setSessionStarted(true);
+    setBeforeTime(time);
+    saveSession({ started: true, beforeTime: time });
+  }
+
+  function recordAfterState(level) {
+    const newAfterStates = { ...afterStates, [level]: currentAfterStates };
+    const newAfterNotes = { ...afterNotes, [level]: currentAfterNote };
+    setAfterStates(newAfterStates);
+    setAfterNotes(newAfterNotes);
+    setShowAfterCapture(false);
+    setCurrentAfterStates([]);
+    setCurrentAfterNote("");
+    saveSession({ afterStates: newAfterStates, afterNotes: newAfterNotes });
+  }
+
+  function recordLevelResult(level, result) {
+    const newResults = { ...levelResults, [level]: { result, time: timeNow() } };
+    setLevelResults(newResults);
+    saveSession({ levelResults: newResults });
+  }
+
+  function resetSession() {
+    if (!confirm("Reset this escalation session? Your before/after notes will be cleared.")) return;
+    setSessionStarted(false);
+    setBeforeStates([]); setBeforeNote(""); setBeforeTime(null);
+    setAfterStates({}); setAfterNotes({}); setLevelResults({});
+    setActiveLevel(null); setShowAfterCapture(false);
+    setCurrentAfterStates([]); setCurrentAfterNote("");
+    saveData(DGAEP_SESSION_KEY, { date: todayStr() });
+  }
+
+  // The latest after state to compare against before
+  const latestAfterLevel = Math.max(...Object.keys(afterStates).map(Number), 0);
+  const latestAfterStates = afterStates[latestAfterLevel] || [];
+  const latestAfterNote = afterNotes[latestAfterLevel] || "";
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <Callout type="info">
-        <strong>Decision gate at every level:</strong> After the timer — did the body change? YES → stay. NO → escalate to next level. Follow in order. Do not skip.
-      </Callout>
-      {levels.map((l) => (
-        <div key={l.level} role="region" aria-label={`Level ${l.level}: ${l.name}`} style={{ background: colors.white, borderRadius: 12, border: `2px solid ${activeLevel === l.level ? colors.accent : colors.borderLight}`, overflow: "hidden" }}>
-          <button
-            onClick={() => setActiveLevel(activeLevel === l.level ? null : l.level)}
-            aria-expanded={activeLevel === l.level}
-            aria-controls={`dgaep-${l.level}`}
-            style={{ width: "100%", padding: "16px 20px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", background: "transparent", border: "none", fontFamily: "inherit", minHeight: 48, textAlign: "left" }}
-            onFocus={(e) => Object.assign(e.target.style, focusStyle)}
-            onBlur={(e) => { e.target.style.outline = "none"; e.target.style.outlineOffset = "0"; }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div aria-hidden="true" style={{ width: 30, height: 30, borderRadius: "50%", background: colors.accent, color: colors.white, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700 }}>{l.level}</div>
-              <span style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 17, fontWeight: 700, color: colors.text }}>{l.name}</span>
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <DGAEPIntro />
+
+      {/* Before state capture */}
+      {!sessionStarted ? (
+        <section aria-label="Begin escalation session" style={{ background: colors.white, border: `2px solid ${colors.accent}`, borderRadius: 14, padding: "22px 22px" }}>
+          <h3 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 18, fontWeight: 700, color: colors.text, margin: "0 0 8px" }}>
+            Before you begin — capture your body state
+          </h3>
+          <p style={{ fontSize: 14, color: colors.textMuted, lineHeight: 1.7, margin: "0 0 14px" }}>
+            This records how your body feels right now, before any escalation steps. You'll capture your state again after each level so you can see what changed. Your working memory is already compromised during escalation — let the tool remember for you.
+          </p>
+          <BodyStateCapture
+            label="Body State — Right Now"
+            stateKey="before"
+            selectedStates={beforeStates}
+            setSelectedStates={setBeforeStates}
+            freeText={beforeNote}
+            setFreeText={setBeforeNote}
+          />
+          <div style={{ marginTop: 16, display: "flex", justifyContent: "flex-end" }}>
+            <Btn onClick={startSession} ariaLabel="Save body state and begin escalation protocol">
+              Save state & begin escalation
+            </Btn>
+          </div>
+        </section>
+      ) : (
+        <>
+          {/* Session active indicator */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: colors.accentGlow, borderRadius: 10, padding: "10px 16px" }}>
+            <div>
+              <span style={{ fontSize: 13, fontWeight: 700, color: colors.accent }}>Escalation session active</span>
+              {beforeTime && <span style={{ fontSize: 13, color: colors.textMuted, marginLeft: 8 }}>Started {beforeTime}</span>}
             </div>
-            <span style={{ fontSize: 13, color: colors.textMuted }}>{l.time}</span>
-          </button>
-          {activeLevel === l.level && (
-            <div id={`dgaep-${l.level}`} style={{ padding: "0 20px 18px", borderTop: `1px solid ${colors.borderLight}`, paddingTop: 14 }}>
-              <p style={{ fontSize: 14, color: colors.text, lineHeight: 1.7, margin: "0 0 10px" }}>{l.desc}</p>
-              <p style={{ fontSize: 13, color: colors.textMuted, lineHeight: 1.6, fontStyle: "italic", margin: "0 0 14px", paddingLeft: 12, borderLeft: `2px solid ${colors.bgWarm}` }}>{l.rationale}</p>
-              <CountdownTimer duration={l.seconds} label={`Level ${l.level} timer`} onComplete={() => {}} />
+            <Btn small variant="ghost" onClick={resetSession} ariaLabel="Reset escalation session">Reset session</Btn>
+          </div>
+
+          {/* Before state summary (collapsed) */}
+          {beforeStates.length > 0 && (
+            <div style={{ background: colors.bgDeep, borderRadius: 10, padding: "12px 16px" }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: colors.textMuted, textTransform: "uppercase", letterSpacing: 0.5 }}>Before state ({beforeTime}): </span>
+              <span style={{ fontSize: 13, color: colors.text }}>{beforeStates.join(", ")}</span>
+              {beforeNote && <span style={{ fontSize: 13, color: colors.textMuted }}> — {beforeNote}</span>}
             </div>
           )}
-        </div>
-      ))}
-      <div role="alert" style={{ background: colors.redSoft, borderRadius: 12, padding: "16px 20px", borderLeft: `4px solid ${colors.red}`, marginTop: 4 }}>
-        <h3 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 15, fontWeight: 700, color: colors.red, margin: "0 0 4px" }}>Medical Red Flags — Stop protocol, seek immediate medical help</h3>
-        <p style={{ fontSize: 14, color: colors.text, lineHeight: 1.7, margin: 0 }}>
-          Chest pain · Fainting · Confusion or disorientation · Slurred speech · New neurological symptoms · Panic persisting for hours without fluctuation
-        </p>
-      </div>
+
+          {/* Decision gate reminder */}
+          <Callout type="info">
+            <strong>Decision gate at every level:</strong> After the timer — how does the body feel now? Record it below. If the body changed (even slightly) → stay at this level. If no change → escalate to the next level.
+          </Callout>
+
+          {/* Escalation levels */}
+          {levels.map((l) => {
+            const levelDone = levelResults[l.level];
+            const levelAfter = afterStates[l.level];
+            return (
+              <div key={l.level} role="region" aria-label={`Level ${l.level}: ${l.name}${levelDone ? ` — ${levelDone.result}` : ""}`} style={{
+                background: colors.white, borderRadius: 12, overflow: "hidden",
+                border: `2px solid ${levelDone?.result === "shifted" ? colors.green : levelDone?.result === "escalate" ? colors.amber : activeLevel === l.level ? colors.accent : colors.borderLight}`,
+              }}>
+                <button
+                  onClick={() => { setActiveLevel(activeLevel === l.level ? null : l.level); setShowAfterCapture(false); }}
+                  aria-expanded={activeLevel === l.level}
+                  aria-controls={`dgaep-level-${l.level}`}
+                  style={{ width: "100%", padding: "16px 20px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", background: "transparent", border: "none", fontFamily: "inherit", minHeight: 48, textAlign: "left" }}
+                  onFocus={(e) => Object.assign(e.target.style, focusStyle)}
+                  onBlur={(e) => { e.target.style.outline = "none"; e.target.style.outlineOffset = "0"; }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div aria-hidden="true" style={{
+                      width: 32, height: 32, borderRadius: "50%",
+                      background: levelDone?.result === "shifted" ? colors.green : levelDone?.result === "escalate" ? colors.amber : colors.accent,
+                      color: colors.white, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700,
+                    }}>
+                      {levelDone?.result === "shifted" ? "✓" : levelDone?.result === "escalate" ? "↑" : l.level}
+                    </div>
+                    <div>
+                      <span style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 17, fontWeight: 700, color: colors.text }}>{l.name}</span>
+                      {levelDone && (
+                        <div style={{ fontSize: 12, color: levelDone.result === "shifted" ? colors.green : colors.amber, marginTop: 2 }}>
+                          {levelDone.result === "shifted" ? "Body shifted" : "Escalated"} at {levelDone.time}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <span style={{ fontSize: 13, color: colors.textMuted }}>{l.time}</span>
+                </button>
+
+                {activeLevel === l.level && (
+                  <div id={`dgaep-level-${l.level}`} style={{ padding: "0 20px 20px", borderTop: `1px solid ${colors.borderLight}`, paddingTop: 14 }}>
+                    <p style={{ fontSize: 15, color: colors.text, lineHeight: 1.7, margin: "0 0 10px" }}>{l.desc}</p>
+                    <p style={{ fontSize: 13, color: colors.textMuted, lineHeight: 1.6, fontStyle: "italic", margin: "0 0 14px", paddingLeft: 12, borderLeft: `2px solid ${colors.bgWarm}` }}>{l.rationale}</p>
+
+                    <CountdownTimer duration={l.seconds} label={`Level ${l.level} timer`} onComplete={() => setShowAfterCapture(true)} />
+
+                    {/* After state capture — appears when timer completes or user triggers it */}
+                    {!levelDone && (
+                      <div style={{ marginTop: 14 }}>
+                        {!showAfterCapture ? (
+                          <Btn small variant="secondary" onClick={() => setShowAfterCapture(true)} ariaLabel="Record how your body feels after this level">
+                            Record body state after this level
+                          </Btn>
+                        ) : (
+                          <div style={{ marginTop: 10 }}>
+                            <BodyStateCapture
+                              label={`After Level ${l.level}`}
+                              stateKey={`after-${l.level}`}
+                              selectedStates={currentAfterStates}
+                              setSelectedStates={setCurrentAfterStates}
+                              freeText={currentAfterNote}
+                              setFreeText={setCurrentAfterNote}
+                              timestamp={timeNow()}
+                            />
+                            <div style={{ marginTop: 12 }}>
+                              <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 16, fontWeight: 700, color: colors.text, margin: "0 0 10px" }}>
+                                Did the body show any change?
+                              </p>
+                              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                                <Btn variant="green" onClick={() => { recordAfterState(l.level); recordLevelResult(l.level, "shifted"); }} ariaLabel="Body shifted — stay at this level">
+                                  Yes — something shifted
+                                </Btn>
+                                <Btn variant="secondary" onClick={() => { recordAfterState(l.level); recordLevelResult(l.level, "escalate"); }} ariaLabel="No change — escalate to next level">
+                                  No change — escalate
+                                </Btn>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Show recorded after state for completed levels */}
+                    {levelDone && levelAfter && (
+                      <div style={{ marginTop: 12, padding: "10px 14px", background: colors.bgDeep, borderRadius: 8 }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: colors.textMuted, textTransform: "uppercase" }}>Recorded after state: </span>
+                        <span style={{ fontSize: 13, color: colors.text }}>{levelAfter.join(", ") || "None selected"}</span>
+                        {afterNotes[l.level] && <span style={{ fontSize: 13, color: colors.textMuted }}> — {afterNotes[l.level]}</span>}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Before/After comparison — always visible when we have data */}
+          {latestAfterLevel > 0 && (
+            <BodyStateComparison
+              beforeStates={beforeStates}
+              beforeNote={beforeNote}
+              afterStates={latestAfterStates}
+              afterNote={latestAfterNote}
+            />
+          )}
+
+          {/* Medical red flags */}
+          <div role="alert" style={{ background: colors.redSoft, borderRadius: 12, padding: "16px 20px", borderLeft: `4px solid ${colors.red}`, marginTop: 4 }}>
+            <h3 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 15, fontWeight: 700, color: colors.red, margin: "0 0 4px" }}>Medical Red Flags — Stop protocol, seek immediate medical help</h3>
+            <p style={{ fontSize: 14, color: colors.text, lineHeight: 1.7, margin: 0 }}>
+              Chest pain · Fainting · Confusion or disorientation · Slurred speech · New neurological symptoms · Panic persisting for hours without fluctuation
+            </p>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -1083,8 +1472,7 @@ export default function NsomApp() {
         <div role="tabpanel" id="panel-dgaep" aria-labelledby="tab-dgaep" hidden={view !== "dgaep"}>
           {view === "dgaep" && (
             <>
-              <SectionHead title="Decision-Gated Autonomic Escalation Protocol" subtitle="When first-line regulation fails, escalation is not failure. It is the next step." />
-              <DGAEPWithTimers />
+              <DGAEPEnhanced />
             </>
           )}
         </div>
