@@ -85,11 +85,22 @@ export const SESSION_TYPES = [
   },
 ];
 
-export const STORAGE_KEY = "nsom-v3";
-export const STORAGE_ENTRIES = "nsom-entries-v3";
-export const STORAGE_CHECKINS = "nsom-checkins-v3";
-export const STORAGE_RESETS = "nsom-resets-v3";
-export const STORAGE_REDLINES = "nsom-redlines-v3";
+export const STORAGE_KEY = "nsom-v4";
+export const STORAGE_ENTRIES = "nsom-v4-entries";
+export const STORAGE_CHECKINS = "nsom-v4-checkins";
+export const STORAGE_RESETS = "nsom-v4-resets";
+export const STORAGE_REDLINES = "nsom-v4-redlines";
+export const STORAGE_WORK = "nsom-v4-work";
+export const STORAGE_TRANSITIONS = "nsom-v4-transitions";
+export const STORAGE_DEFECTS = "nsom-v4-defects";
+
+export const DEFECT_CAUSES = [
+  "Missed regulation break", "Insufficient recovery buffer", "Sensory overload",
+  "Social masking cost", "Sleep deficit", "Nutrition skip", "Transition failure",
+  "Underestimated task load", "Unexpected demand", "Custom",
+];
+
+export const TRANSITION_ACTIVITIES = ["Work task", "Meeting", "Break", "Email", "Commute", "Childcare", "Meal", "Exercise", "Social", "Rest", "Other"];
 
 export const focusStyle = {
   outline: "3px solid #195252",

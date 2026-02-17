@@ -2,204 +2,101 @@
 
 import { useState } from "react";
 import { C, focusStyle } from "./constants";
-import { Btn } from "./BaseComponents";
+import { Btn, OptionButton } from "./BaseComponents";
+import { todayStr } from "./utils";
 
 // ═══════════════════════════════════════════════════════════════
-// DAILY CHECK-IN (sleep, appetite, social)
+// DAILY CHECK-IN (v4 - simplified)
 // ═══════════════════════════════════════════════════════════════
 
-export function DailyCheckIn({ onComplete, existing }) {
-  const [sleep, setSleep] = useState(existing?.sleep ?? null);
-  const [appetite, setAppetite] = useState(existing?.appetite ?? null);
-  const [social, setSocial] = useState(existing?.social ?? null);
+export function DailyCheckIn({ checkins, onSave }) {
+  const todayCheckIn = checkins.find(c => c.date === todayStr());
+  const [sleep, setSleep] = useState(todayCheckIn?.sleep ?? "");
+  const [ate, setAte] = useState(todayCheckIn?.ate ?? null);
+  const [social, setSocial] = useState(todayCheckIn?.social ?? null);
+  const [saved, setSaved] = useState(!!todayCheckIn);
 
-  function handleSubmit() {
-    if (sleep !== null && appetite !== null && social !== null) {
-      onComplete?.({ sleep, appetite, social });
-    }
-  }
+  function applyFocus(e) { Object.assign(e.target.style, focusStyle); }
+  function removeFocus(e) { e.target.style.outline = "none"; e.target.style.outlineOffset = ""; }
 
-  function applyFocus(e) {
-    Object.assign(e.target.style, focusStyle);
+  if (saved) {
+    return (
+      <div style={{ background: C.greenSoft, borderRadius: 12, padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <span style={{ fontSize: 14, color: C.green, fontWeight: 600 }}>✓ Check-in complete</span>
+        <Btn small variant="ghost" onClick={() => setSaved(false)}>Edit</Btn>
+      </div>
+    );
   }
-  function removeFocus(e) {
-    e.target.style.outline = "none";
-    e.target.style.outlineOffset = "";
-  }
-
-  const isComplete = sleep !== null && appetite !== null && social !== null;
 
   return (
-    <div
-      style={{
-        background: C.white,
-        border: `2px solid ${C.borderLight}`,
-        borderRadius: 12,
-        padding: "20px 22px",
-      }}
-    >
-      <div
-        style={{
-          fontFamily: "'Cormorant Garamond', Georgia, serif",
-          fontSize: 20,
-          fontWeight: 700,
-          color: C.text,
-          marginBottom: 8,
-        }}
-      >
-        Daily check-in
-      </div>
-      <p
-        style={{
-          fontSize: 14,
-          color: C.textMuted,
-          lineHeight: 1.6,
-          marginBottom: 18,
-          margin: "0 0 18px",
-        }}
-      >
-        Track three daily baseline markers.
-      </p>
+    <div style={{ background: C.white, border: `2px solid ${C.borderLight}`, borderRadius: 14, padding: "20px 22px" }}>
+      <h3 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 18, fontWeight: 700, color: C.text, margin: "0 0 14px" }}>Daily Check-In</h3>
 
-      {/* Sleep Quality */}
-      <div style={{ marginBottom: 20 }}>
-        <label
-          style={{
-            display: "block",
-            fontSize: 15,
-            fontWeight: 600,
-            color: C.text,
-            marginBottom: 10,
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <div>
+          <label htmlFor="slp" style={{ display: "block", fontSize: 14, fontWeight: 600, color: C.textMuted, marginBottom: 6 }}>Hours of sleep</label>
+          <input
+            id="slp"
+            type="number"
+            step="0.5"
+            value={sleep}
+            onChange={e => setSleep(e.target.value)}
+            placeholder="6.5"
+            style={{
+              width: 120,
+              padding: "12px 14px",
+              minHeight: 44,
+              borderRadius: 8,
+              border: `2px solid ${C.borderLight}`,
+              fontSize: 15,
+              fontFamily: "inherit",
+              color: C.text,
+              background: C.bg,
+              boxSizing: "border-box",
+            }}
+            onFocus={applyFocus}
+            onBlur={removeFocus}
+          />
+        </div>
+
+        <div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: C.textMuted, marginBottom: 8 }}>Did you eat today?</div>
+          <div style={{ display: "flex", gap: 8 }}>
+            {[true, false].map(v => (
+              <OptionButton
+                key={String(v)}
+                label={v ? "Yes" : "No"}
+                selected={ate === v}
+                onClick={() => setAte(v)}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: C.textMuted, marginBottom: 8 }}>Social contact today?</div>
+          <div style={{ display: "flex", gap: 8 }}>
+            {[true, false].map(v => (
+              <OptionButton
+                key={String(v)}
+                label={v ? "Yes" : "No"}
+                selected={social === v}
+                onClick={() => setSocial(v)}
+              />
+            ))}
+          </div>
+        </div>
+
+        <Btn
+          small
+          onClick={() => {
+            onSave({ date: todayStr(), sleep: sleep ? Number(sleep) : null, ate, social });
+            setSaved(true);
           }}
         >
-          Sleep quality last night
-        </label>
-        <div style={{ display: "flex", gap: 8 }}>
-          {["Poor", "Fair", "Good", "Excellent"].map((option, idx) => (
-            <button
-              key={option}
-              onClick={() => setSleep(idx + 1)}
-              aria-label={`Rate sleep as ${option}`}
-              aria-pressed={sleep === idx + 1}
-              style={{
-                flex: 1,
-                padding: "10px 12px",
-                border: `2px solid ${
-                  sleep === idx + 1 ? C.accent : C.borderLight
-                }`,
-                borderRadius: 8,
-                background: sleep === idx + 1 ? C.accentGlow : C.white,
-                color: sleep === idx + 1 ? C.accent : C.textMuted,
-                fontSize: 14,
-                fontWeight: sleep === idx + 1 ? 700 : 500,
-                cursor: "pointer",
-                fontFamily: "inherit",
-                transition: "all 0.15s",
-              }}
-              onFocus={applyFocus}
-              onBlur={removeFocus}
-            >
-              {option}
-            </button>
-          ))}
-        </div>
+          Save
+        </Btn>
       </div>
-
-      {/* Appetite */}
-      <div style={{ marginBottom: 20 }}>
-        <label
-          style={{
-            display: "block",
-            fontSize: 15,
-            fontWeight: 600,
-            color: C.text,
-            marginBottom: 10,
-          }}
-        >
-          Appetite today
-        </label>
-        <div style={{ display: "flex", gap: 8 }}>
-          {["Low", "Reduced", "Normal", "Strong"].map((option, idx) => (
-            <button
-              key={option}
-              onClick={() => setAppetite(idx + 1)}
-              aria-label={`Rate appetite as ${option}`}
-              aria-pressed={appetite === idx + 1}
-              style={{
-                flex: 1,
-                padding: "10px 12px",
-                border: `2px solid ${
-                  appetite === idx + 1 ? C.accent : C.borderLight
-                }`,
-                borderRadius: 8,
-                background: appetite === idx + 1 ? C.accentGlow : C.white,
-                color: appetite === idx + 1 ? C.accent : C.textMuted,
-                fontSize: 14,
-                fontWeight: appetite === idx + 1 ? 700 : 500,
-                cursor: "pointer",
-                fontFamily: "inherit",
-                transition: "all 0.15s",
-              }}
-              onFocus={applyFocus}
-              onBlur={removeFocus}
-            >
-              {option}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Social Contact */}
-      <div style={{ marginBottom: 20 }}>
-        <label
-          style={{
-            display: "block",
-            fontSize: 15,
-            fontWeight: 600,
-            color: C.text,
-            marginBottom: 10,
-          }}
-        >
-          Social contact today
-        </label>
-        <div style={{ display: "flex", gap: 8 }}>
-          {["None", "Minimal", "Moderate", "High"].map((option, idx) => (
-            <button
-              key={option}
-              onClick={() => setSocial(idx + 1)}
-              aria-label={`Rate social contact as ${option}`}
-              aria-pressed={social === idx + 1}
-              style={{
-                flex: 1,
-                padding: "10px 12px",
-                border: `2px solid ${
-                  social === idx + 1 ? C.accent : C.borderLight
-                }`,
-                borderRadius: 8,
-                background: social === idx + 1 ? C.accentGlow : C.white,
-                color: social === idx + 1 ? C.accent : C.textMuted,
-                fontSize: 14,
-                fontWeight: social === idx + 1 ? 700 : 500,
-                cursor: "pointer",
-                fontFamily: "inherit",
-                transition: "all 0.15s",
-              }}
-              onFocus={applyFocus}
-              onBlur={removeFocus}
-            >
-              {option}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <Btn
-        onClick={handleSubmit}
-        ariaLabel="Complete daily check-in"
-        disabled={!isComplete}
-      >
-        Complete check-in
-      </Btn>
     </div>
   );
 }

@@ -188,3 +188,31 @@ export function ProgressIndicator({ current, total, label }) {
     </div>
   );
 }
+
+export function OptionButton({ label, selected, onClick, ariaLabel }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-pressed={selected}
+      aria-label={ariaLabel || label}
+      style={{
+        padding: "12px 18px",
+        minHeight: 44,
+        borderRadius: 10,
+        border: `2px solid ${selected ? C.accent : C.borderLight}`,
+        background: selected ? C.accentGlow : C.white,
+        color: selected ? C.accent : C.textMuted,
+        fontSize: 14,
+        fontWeight: selected ? 700 : 500,
+        cursor: "pointer",
+        fontFamily: "inherit",
+        textAlign: "left",
+        lineHeight: 1.3,
+      }}
+      onFocus={(e) => Object.assign(e.target.style, focusStyle)}
+      onBlur={(e) => { e.target.style.outline = "none"; }}
+    >
+      {label}
+    </button>
+  );
+}

@@ -26,6 +26,10 @@ export function daysAgo(dateStr) {
   return diffDays;
 }
 
+export function timeStr() {
+  return new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+}
+
 export function timeOfDay() {
   const h = new Date().getHours();
   return h < 12 ? "Morning" : h < 17 ? "Afternoon" : "Evening";
