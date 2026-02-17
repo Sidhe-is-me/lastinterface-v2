@@ -1,37 +1,65 @@
-// localStorage wrapper for persistent data
-// Replaces Claude artifact's window.storage API
+// ═══════════════════════════════════════════════════════════
+// Storage Utilities
+// TODO: Replace localStorage with database (Supabase/Firebase) for
+// cross-device persistence when user authentication is added
+// ═══════════════════════════════════════════════════════════
 
-const STORAGE_PREFIX = "nsom_";
+/**
+ * Load data from localStorage
+ * @param {string} key - Storage key
+ * @param {any} fallback - Fallback value if key doesn't exist
+ * @returns {any} Parsed data or fallback
+ */
+export function loadData(key, fallback) {
+  if (typeof window === "undefined") return fallback;
 
-export const storage = {
-  async get(key) {
-    try {
-      if (typeof window === "undefined") return null;
-      const value = localStorage.getItem(STORAGE_PREFIX + key);
-      if (value === null) return null;
-      return { key, value };
-    } catch {
-      return null;
-    }
-  },
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch (error) {
+    console.error(`Error loading data for key "${key}":`, error);
+    return fallback;
+  }
+}
 
-  async set(key, value) {
-    try {
-      if (typeof window === "undefined") return null;
-      localStorage.setItem(STORAGE_PREFIX + key, value);
-      return { key, value };
-    } catch {
-      return null;
-    }
-  },
+/**
+ * Save data to localStorage
+ * @param {string} key - Storage key
+ * @param {any} data - Data to save (will be JSON stringified)
+ */
+export function saveData(key, data) {
+  if (typeof window === "undefined") return;
 
-  async delete(key) {
-    try {
-      if (typeof window === "undefined") return null;
-      localStorage.removeItem(STORAGE_PREFIX + key);
-      return { key, deleted: true };
-    } catch {
-      return null;
-    }
-  },
-};
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch (error) {
+    console.error(`Error saving data for key "${key}":`, error);
+  }
+}
+
+/**
+ * Delete data from localStorage
+ * @param {string} key - Storage key to delete
+ */
+export function deleteData(key) {
+  if (typeof window === "undefined") return;
+
+  try {
+    localStorage.removeItem(key);
+  } catch (error) {
+    console.error(`Error deleting data for key "${key}":`, error);
+  }
+}
+
+/**
+ * Clear all localStorage data
+ */
+export function clearAllData() {
+  if (typeof window === "undefined") return;
+
+  try {
+    localStorage.clear();
+  } catch (error) {
+    console.error("Error clearing localStorage:", error);
+  }
+}
