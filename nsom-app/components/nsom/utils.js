@@ -18,6 +18,14 @@ export function friendlyDate(ds) {
   });
 }
 
+export function daysAgo(dateStr) {
+  const then = new Date(dateStr + "T12:00:00");
+  const now = new Date();
+  const diffTime = Math.abs(now - then);
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays;
+}
+
 export function timeOfDay() {
   const h = new Date().getHours();
   return h < 12 ? "Morning" : h < 17 ? "Afternoon" : "Evening";

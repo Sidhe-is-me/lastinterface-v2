@@ -86,6 +86,10 @@ export const SESSION_TYPES = [
 ];
 
 export const STORAGE_KEY = "nsom-v3";
+export const STORAGE_ENTRIES = "nsom-entries-v3";
+export const STORAGE_CHECKINS = "nsom-checkins-v3";
+export const STORAGE_RESETS = "nsom-resets-v3";
+export const STORAGE_REDLINES = "nsom-redlines-v3";
 
 export const focusStyle = {
   outline: "3px solid #195252",
