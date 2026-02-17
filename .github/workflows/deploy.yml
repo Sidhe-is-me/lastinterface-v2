@@ -37,6 +37,11 @@ jobs:
           cd nsom-app
           npm run build
 
+      - name: Remove CNAME file (force default GitHub Pages URL)
+        run: |
+          rm -f nsom-app/out/CNAME
+          echo "Removed any CNAME file to use default GitHub Pages URL"
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
