@@ -1,13 +1,13 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "NSOM — Nervous System Operating Manual",
+  title: "The Last Interface — Neurodiversity-Informed Nervous System Regulation",
   description:
-    "A decision-gated daily regulation protocol for neurodivergent nervous systems. By Yve Bergeron.",
+    "Applying accessibility engineering principles to autonomic regulation for people whose bodies and brains don't fit the default. By Yve Bergeron.",
   openGraph: {
-    title: "The Nervous System Operating Manual",
+    title: "The Last Interface",
     description:
-      "A decision-gated regulation protocol for neurodivergent nervous systems — with HRV tracking, DGAEP escalation timers, and AI-powered pattern analysis.",
+      "Neurodiversity-Informed Nervous System Regulation Architecture — decision-gated protocol with HRV tracking, DGAEP escalation, and pattern analysis.",
     type: "website",
   },
 };
