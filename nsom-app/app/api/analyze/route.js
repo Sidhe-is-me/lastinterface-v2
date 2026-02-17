@@ -3,6 +3,11 @@ import { NextResponse } from "next/server";
 // ═══════════════════════════════════════════════════════════
 // Server-side API route for Claude analysis
 // Keeps API key secure on the server
+//
+// ⚠️  NOTE: This route will NOT work on GitHub Pages (static hosting)
+// For GitHub Pages deployment, the Analysis features that use this
+// API will need to be disabled or the API calls moved to client-side
+// with API key exposed (not recommended for production)
 // ═══════════════════════════════════════════════════════════
 
 export async function POST(request) {
