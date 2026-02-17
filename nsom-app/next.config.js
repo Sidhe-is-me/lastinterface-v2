@@ -2,7 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   output: 'export',
-  basePath: '/lastinterface',
+  basePath: '/lastinterface-v2',
   images: {
     unoptimized: true,
   },
